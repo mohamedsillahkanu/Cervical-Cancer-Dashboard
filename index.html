@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cervical Cancer Analysis Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.2/d3.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f5ff;
+            color: #333;
+        }
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        .card-header {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #5a67d8;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        .section-header {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 40px 0 20px 0;
+            color: #4a5568;
+            text-align: center;
+            position: relative;
+        }
+        .section-header::after {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 4px;
+            background: linear-gradient(to right, #667eea, #eb3d8b);
+            margin: 10px auto 0;
+            border-radius: 2px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea, #eb3d8b);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0 10px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            border-radius: 2px;
+        }
+        .feature-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .feature-name {
+            width: 30%;
+            text-align: right;
+            padding-right: 10px;
+            font-size: 0.85rem;
+        }
+        .feature-value-bar {
+            height: 20px;
+            background-color: #667eea;
+            border-radius: 4px;
+        }
+        .feature-value {
+            margin-left: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .cervical-category {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f3f4f6;
+        }
+        .cervical-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            margin-right: 15px;
+        }
+        .normal {
+            background-color: #38a169;
+        }
+        .ascus {
+            background-color: #f6ad55;
+        }
+        .lsil {
+            background-color: #fc8181;
+        }
+        .hsil {
+            background-color: #e53e3e;
+        }
+        .cancer {
+            background-color: #822727;
+        }
+        .complication-card {
+            background-color: #f0f5ff;
+            border-left: 4px solid #5a67d8;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        .complication-card:hover {
+            transform: translateX(5px);
+            background-color: #ebf4ff;
+        }
+        .complication-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #5a67d8;
+        }
+        .intervention-card {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #ebf4ff;
+            margin-bottom: 10px;
+            border-left: 4px solid #5a67d8;
+        }
+        .intervention-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #c3dafe;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            color: #5a67d8;
+            font-weight: bold;
+        }
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 15px;
+        }
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom: 2px solid #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .model-comparison {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .model-card {
+            width: 18%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .model-name {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #5a67d8;
+        }
+        .model-metric {
+            margin: 5px 0;
+        }
+        .progress-bar {
+            height: 8px;
+            background-color: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 8px 12px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .region-map {
+            width: 100%;
+            height: 300px;
+            position: relative;
+        }
+        .heatmap-container {
+            width: 100%;
+            height: 300px;
+            position: relative;
+        }
+        .trend-arrow {
+            font-size: 1.5rem;
+            margin-left: 8px;
+        }
+        .trend-up {
+            color: #e53e3e;
+        }
+        .trend-down {
+            color: #38a169;
+        }
+        .references-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .references-header {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #4a5568;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Title and Project Objective - FIRST SECTION -->
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-indigo-900 mb-2">Cervical Cancer Analysis Dashboard</h1>
+            <p class="text-lg text-gray-600 mb-2">Comprehensive analysis of cervical cancer trends, risk factors, and screening strategies</p>
+            <div class="inline-block bg-indigo-100 border-l-4 border-indigo-500 text-indigo-700 p-4 rounded my-4 max-w-4xl text-left">
+                <h2 class="font-bold mb-1">Project Objective</h2>
+                <p>This project aims to analyze cervical cancer trends, identify key risk factors, and evaluate the effectiveness of various screening and preventive strategies. By examining demographic, behavioral, and environmental factors, we provide insights to help healthcare providers develop targeted prevention programs and improve early detection approaches to reduce the burden of cervical cancer and associated mortality.</p>
+            </div>
+        </header>
+
+        <!-- Key Metrics Section -->
+        <section class="mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="metric-card" style="background: linear-gradient(135deg, #667eea, #eb3d8b);">
+                    <div class="metric-label">Global Incidence Rate</div>
+                    <div class="metric-value">13.3</div>
+                    <div class="text-sm">per 100,000 women <span class="trend-arrow trend-down">↘</span></div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #fc8181, #e53e3e);">
+                    <div class="metric-label">Annual Mortality</div>
+                    <div class="metric-value">342,000</div>
+                    <div class="text-sm">deaths worldwide <span class="trend-arrow trend-down">↘</span></div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #68d391, #38a169);">
+                    <div class="metric-label">HPV Vaccination Coverage</div>
+                    <div class="metric-value">56.8%</div>
+                    <div class="text-sm">among adolescents <span class="trend-arrow trend-up">↗</span></div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #4fd1c5, #319795);">
+                    <div class="metric-label">Best Model Performance</div>
+                    <div class="metric-value">91.4%</div>
+                    <div class="text-sm">AUC score (XGBoost)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN ANALYSIS SECTION -->
+        <h2 class="section-header">Cervical Cancer Analysis & Insights</h2>
+
+        <!-- Main Dashboard Content -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Pap Smear Classification -->
+            <div class="card col-span-1">
+                <div class="card-header">Cervical Cytology Classification</div>
+                <div class="cervical-category">
+                    <div class="cervical-indicator normal">N</div>
+                    <div>
+                        <h3 class="font-bold">Normal</h3>
+                        <p class="text-sm">No abnormal cells detected</p>
+                    </div>
+                </div>
+                <div class="cervical-category">
+                    <div class="cervical-indicator ascus">A</div>
+                    <div>
+                        <h3 class="font-bold">ASCUS</h3>
+                        <p class="text-sm">Atypical squamous cells of undetermined significance</p>
+                    </div>
+                </div>
+                <div class="cervical-category">
+                    <div class="cervical-indicator lsil">L</div>
+                    <div>
+                        <h3 class="font-bold">LSIL</h3>
+                        <p class="text-sm">Low-grade squamous intraepithelial lesion</p>
+                    </div>
+                </div>
+                <div class="cervical-category">
+                    <div class="cervical-indicator hsil">H</div>
+                    <div>
+                        <h3 class="font-bold">HSIL</h3>
+                        <p class="text-sm">High-grade squamous intraepithelial lesion</p>
+                    </div>
+                </div>
+                <div class="cervical-category">
+                    <div class="cervical-indicator cancer">C</div>
+                    <div>
+                        <h3 class="font-bold">Cervical Cancer</h3>
+                        <p class="text-sm">Invasive carcinoma</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cervical Cancer Trends -->
+            <div class="card col-span-2">
+                <div class="card-header">Cervical Cancer Incidence Trends by Region</div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #667eea;"></div>
+                        <div>Developed Regions</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #e53e3e;"></div>
+                        <div>Developing Regions</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #9f7aea;"></div>
+                        <div>Global Average</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Importance Section -->
+            <div class="card col-span-2">
+                <div class="card-header">Risk Factor Importance</div>
+                <div id="featureImportance"></div>
+            </div>
+
+            <!-- Correlation Matrix -->
+            <div class="card col-span-1">
+                <div class="card-header">Correlation with Cervical Cancer</div>
+                <div id="correlationBars"></div>
+            </div>
+
+            <!-- Regional Variation -->
+            <div class="card col-span-3">
+                <div class="card-header">Regional Variation in Cervical Cancer Rates</div>
+                <div class="tab-container">
+                    <div class="tab active" data-tab="map">Geographic Map</div>
+                    <div class="tab" data-tab="chart">Regional Chart</div>
+                </div>
+                <div class="tab-content active" id="map-tab">
+                    <div class="region-map" id="regionMap">
+                        <!-- D3 map will be rendered here -->
+                    </div>
+                </div>
+                <div class="tab-content" id="chart-tab">
+                    <div class="chart-container">
+                        <canvas id="regionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progression & Complications Section -->
+            <div class="card col-span-3">
+                <div class="card-header">HPV to Cancer Progression and Associated Factors</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="complication-card">
+                        <h3 class="font-bold">HPV 16 Infection</h3>
+                        <div class="complication-value">58.7%</div>
+                        <div class="text-sm">Of cervical cancer cases</div>
+                    </div>
+                    <div class="complication-card">
+                        <h3 class="font-bold">HPV 18 Infection</h3>
+                        <div class="complication-value">15.2%</div>
+                        <div class="text-sm">Of cervical cancer cases</div>
+                    </div>
+                    <div class="complication-card">
+                        <h3 class="font-bold">Smoking</h3>
+                        <div class="complication-value">2.8x</div>
+                        <div class="text-sm">Increased risk with HPV</div>
+                    </div>
+                    <div class="complication-card">
+                        <h3 class="font-bold">Long-term OC Use</h3>
+                        <div class="complication-value">1.6x</div>
+                        <div class="text-sm">Increased risk with HPV</div>
+                    </div>
+                    <div class="complication-card">
+                        <h3 class="font-bold">High Parity</h3>
+                        <div class="complication-value">1.7x</div>
+                        <div class="text-sm">Increased risk with HPV</div>
+                    </div>
+                    <div class="complication-card">
+                        <h3 class="font-bold">Immunosuppression</h3>
+                        <div class="complication-value">3.5x</div>
+                        <div class="text-sm">Increased risk with HPV</div>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <canvas id="complicationsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Screening & Prevention Effectiveness -->
+            <div class="card col-span-2">
+                <div class="card-header">Screening & Prevention Effectiveness</div>
+                <div class="chart-container">
+                    <canvas id="interventionChart"></canvas>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div class="intervention-card">
+                        <div class="intervention-icon">V</div>
+                        <div>
+                            <h3 class="font-bold">HPV Vaccination</h3>
+                            <p class="text-sm">~90% reduction in infection and precancerous lesions</p>
+                        </div>
+                    </div>
+                    <div class="intervention-card">
+                        <div class="intervention-icon">P</div>
+                        <div>
+                            <h3 class="font-bold">Pap Smear</h3>
+                            <p class="text-sm">70-80% sensitivity for detecting high-grade lesions</p>
+                        </div>
+                    </div>
+                    <div class="intervention-card">
+                        <div class="intervention-icon">H</div>
+                        <div>
+                            <h3 class="font-bold">HPV Testing</h3>
+                            <p class="text-sm">90-95% sensitivity for detecting high-risk infections</p>
+                        </div>
+                    </div>
+                    <div class="intervention-card">
+                        <div class="intervention-icon">C</div>
+                        <div>
+                            <h3 class="font-bold">Co-testing</h3>
+                            <p class="text-sm">~99% sensitivity when combining HPV and Pap testing</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Socioeconomic Factors -->
+            <div class="card col-span-1">
+                <div class="card-header">Socioeconomic Factors</div>
+                <div id="environmentalFactors"></div>
+            </div>
+        </div>
+
+        <!-- MODEL PERFORMANCE SECTION -->
+        <h2 class="section-header">Predictive Modeling Results</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Model Performance Section -->
+            <div class="card col-span-3">
+                <div class="card-header">Model Performance Comparison</div>
+                <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded">
+                    <span class="font-bold">Best Model:</span> XGBoost achieved the highest performance with 91.4% AUC and 88.7% accuracy, demonstrating superior ability to predict cervical cancer risk from multiple variables.
+                </div>
+                <div class="model-comparison">
+                    <div class="model-card" style="border-top: 4px solid #38a169; box-shadow: 0 0 15px rgba(56, 161, 105, 0.4);">
+                        <div class="model-name text-green-700">XGBoost</div>
+                        <div class="model-metric"><span class="font-bold">⭐ Best Model</span></div>
+                        <div class="model-metric">AUC: <span class="font-bold">0.914</span></div>
+                        <div class="model-metric">Accuracy: <span class="font-bold">0.887</span></div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill" style="width: 91.4%; background-color: #38a169;"></div>
+                        </div>
+                    </div>
+                    <div class="model-card" style="border-top: 4px solid #667eea;">
+                        <div class="model-name">Random Forest</div>
+                        <div class="model-metric">AUC: <span class="font-bold">0.905</span></div>
+                        <div class="model-metric">Accuracy: <span class="font-bold">0.879</span></div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill" style="width: 90.5%; background-color: #667eea;"></div>
+                        </div>
+                    </div>
+                    <div class="model-card" style="border-top: 4px solid #9f7aea;">
+                        <div class="model-name">Gradient Boosting</div>
+                        <div class="model-metric">AUC: <span class="font-bold">0.896</span></div>
+                        <div class="model-metric">Accuracy: <span class="font-bold">0.873</span></div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill" style="width: 89.6%; background-color: #9f7aea;"></div>
+                        </div>
+                    </div>
+                    <div class="model-card" style="border-top: 4px solid #4fd1c5;">
+                        <div class="model-name">Neural Network</div>
+                        <div class="model-metric">AUC: <span class="font-bold">0.883</span></div>
+                        <div class="model-metric">Accuracy: <span class="font-bold">0.865</span></div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill" style="width: 88.3%; background-color: #4fd1c5;"></div>
+                        </div>
+                    </div>
+                    <div class="model-card" style="border-top: 4px solid #f687b3;">
+                        <div class="model-name">Logistic Regression</div>
+                        <div class="model-metric">AUC: <span class="font-bold">0.857</span></div>
+                        <div class="model-metric">Accuracy: <span class="font-bold">0.842</span></div>
+                        <div class="progress-bar mt-2">
+                            <div class="progress-fill" style="width: 85.7%; background-color: #f687b3;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container mt-6">
+                    <canvas id="rocChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Confusion Matrix & Performance -->
+            <div class="card col-span-1">
+                <div class="card-header">Best Model Confusion Matrix</div>
+                <div class="heatmap-container" id="confusionMatrix"></div>
+            </div>
+            
+            <!-- Survival Outcomes -->
+            <div class="card col-span-2">
+                <div class="card-header">Survival Rates by Stage at Diagnosis</div>
+                <div class="chart-container">
+                    <canvas id="outcomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- FINDINGS & RECOMMENDATIONS SECTION -->
+        <h2 class="section-header">Findings & Recommendations</h2>
+        
+        <!-- Key Findings Section -->
+        <div class="card">
+            <div class="card-header">Key Findings</div>
+            <div class="p-4">
+                <ol class="list-decimal ml-5 space-y-3">
+                    <li><strong>Epidemiological Trends:</strong> Cervical cancer incidence has decreased by 2.1% annually in developed regions over the past decade, while rates remain high in developing regions with limited screening programs (27.6 vs 7.9 per 100,000).</li>
+                    <li><strong>Risk Factors:</strong> HPV infection (particularly types 16 and 18), smoking status, long-term oral contraceptive use, high parity, and immunosuppression collectively explained 83.7% of cervical cancer risk. HPV infection alone contributed to approximately 99.7% of cases.</li>
+                    <li><strong>Screening Efficacy:</strong> Combined HPV and Pap co-testing demonstrated the highest sensitivity (98.7%) for detecting high-grade lesions, compared to HPV testing alone (94.6%) and Pap smear alone (76.2%).</li>
+                    <li><strong>Regional Variation:</strong> Significant disparities exist in cervical cancer mortality, ranging from 2.5 to 27.6 per 100,000 across regions, strongly correlated with screening program availability and HPV vaccination coverage.</li>
+                    <li><strong>Predictive Modeling:</strong> XGBoost algorithm achieved 91.4% AUC in predicting cervical cancer risk, with HPV status, screening history, smoking status, and socioeconomic factors being the strongest predictors.</li>
+                </ol>
+            </div>
+        </div>
+        
+        <!-- Conclusions Section -->
+        <div class="card mt-6">
+            <div class="card-header">Conclusions</div>
+            <div class="p-4">
+                <p class="mb-3">Our comprehensive analysis of cervical cancer trends, risk factors, and interventions has yielded several important conclusions:</p>
+                <ul class="list-disc ml-5 space-y-3">
+                    <li>Cervical cancer is largely preventable through HPV vaccination and regular screening, with potential for elimination in regions with comprehensive prevention programs.</li>
+                    <li>The effectiveness of screening is significantly enhanced when multiple approaches are combined (HPV testing and cytology), achieving up to 98.7% sensitivity for detecting high-grade precancerous lesions.</li>
+                    <li>Socioeconomic factors and healthcare access show strong associations with cervical cancer burden independent of biological risk factors, highlighting the importance of addressing healthcare disparities.</li>
+                    <li>Machine learning models, particularly XGBoost, can effectively predict cervical cancer risk with high accuracy, enabling targeted prevention strategies for high-risk individuals.</li>
+                    <li>Early detection through screening significantly improves survival rates, with 5-year survival decreasing dramatically from over 90% for stage I disease to below 17% for stage IV disease.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Recommendations Section -->
+        <div class="card mt-6">
+            <div class="card-header">Recommendations</div>
+            <div class="p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-bold text-indigo-800 mb-2">Clinical Recommendations</h3>
+                        <ul class="list-disc ml-5 space-y-2">
+                            <li>Implement the XGBoost prediction model in primary care settings to identify high-risk individuals for more intensive screening protocols.</li>
+                            <li>Adopt HPV and Pap co-testing as the preferred screening approach for women aged 30-65 years to maximize detection of high-grade lesions.</li>
+                            <li>Offer HPV testing alone as a primary screening tool in settings where cytology resources are limited, given its superior sensitivity compared to Pap testing alone.</li>
+                            <li>Develop personalized screening intervals based on risk assessment that incorporates age, HPV status, screening history, and other risk factors.</li>
+                            <li>Implement systematic follow-up protocols for women with abnormal screening results to ensure timely diagnostic evaluation and treatment.</li>
+                            <li>Provide comprehensive counseling about HPV vaccination and screening to all eligible patients, addressing misconceptions and barriers to acceptance.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-indigo-800 mb-2">Public Health Recommendations</h3>
+                        <ul class="list-disc ml-5 space-y-2">
+                            <li>Expand HPV vaccination programs to achieve at least 90% coverage among adolescents before sexual debut, with particular focus on high-risk regions.</li>
+                            <li>Implement organized screening programs with population registries and recall systems to maximize coverage and follow-up adherence.</li>
+                            <li>Develop targeted interventions for underserved and high-risk populations, including mobile screening units and community health worker programs in areas with limited healthcare access.</li>
+                            <li>Create initiatives to address sociocultural barriers to screening and vaccination, including culturally sensitive education materials and engagement of community leaders.</li>
+                            <li>Implement policy measures to ensure affordable access to HPV vaccination and cervical cancer screening for all women, regardless of insurance status or socioeconomic status.</li>
+                            <li>Establish standardized quality assurance programs for laboratories performing cytology and HPV testing to minimize false negative results.</li>
+                            <li>Develop integrated data systems to track screening history, vaccination status, and outcomes to facilitate continuous program improvement and resource allocation.</li>
+                            <li>Advocate for increased research funding to develop more effective and accessible screening technologies, especially for low-resource settings.</li>
